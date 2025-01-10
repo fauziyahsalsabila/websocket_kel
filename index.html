@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebSocket Client</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+      th,
+      td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+      }
+      th {
+        background-color: #f2f2f2;
+      }
+      tr:nth-child(even) {
+        background-color: #f9f9f9;
+      }
+      tr.alert {
+        background-color: #ffcccc; /* Highlight pesan "alert" */
+        font-weight: bold;
+      }
+      #search {
+        margin-top: 10px;
+        padding: 5px;
+        width: 300px; /* Lebar diperlebar menjadi 300px */
+      }
+    </style>
+  </head>
+  <body>
+    <h1>WebSocket Client</h1>
+    <p>Status: <span id="status">Disconnected</span></p>
+
+    <!-- Input Pencarian -->
+    <input
+      type="text"
+      id="search"
+      placeholder="Cari berdasarkan ID, Pesan, atau Waktu"
+    />
+
+    <h2>Pesan dari Server:</h2>
+    <!-- Tabel Data -->
+    <table id="dataTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Pesan</th>
+          <th>Waktu</th>
+        </tr>
+      </thead>
+      <tbody id="dataBody">
+        <!-- Data dari server akan muncul di sini -->
+      </tbody>
+    </table>
+
+    <script>
+      const statusEl = document.getElementById("status");
+      const dataBody = document.getElementById("dataBody");
+      const searchInput = document.getElementById("search");
+      let allData = []; // Simpan semua data yang diterima dari server
+
+      // Koneksi WebSocket
+      const ws = new WebSocket("ws://localhost:3000");
+
+      ws.onopen = () => {
+        statusEl.textContent = "Connected";
+        statusEl.style.color = "green";
+      };
+
+      ws.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        if (message.data) {
+          updateTable(message.data);
+        }
+      };
+
+      ws.onclose = () => {
+        statusEl.textContent = "Disconnected";
+        statusEl.style.color = "red";
+      };
+
+      // Fungsi untuk memperbarui tabel
+      function updateTable(data) {
+        allData = data; // Simpan data untuk filter
+        renderTable(data);
+      }
+
+      // Render data ke dalam tabel
+      function renderTable(data) {
+        dataBody.innerHTML = ""; // Kosongkan tabel
+        data.forEach((item) => {
+          const row = document.createElement("tr");
+
+          // Highlight jika pesan mengandung "alert"
+          if (item.message.includes("alert")) {
+            row.classList.add("alert");
+          }
+
+          row.innerHTML = `
+                    <td>${item.id}</td>
+                    <td>${item.message}</td>
+                    <td>${new Date(item.timestamp).toLocaleString()}</td>
+                `;
+          dataBody.appendChild(row);
+        });
+      }
+
+      // Fitur pencarian
+      searchInput.addEventListener("input", () => {
+        const query = searchInput.value.toLowerCase();
+        const filteredData = allData.filter(
+          (item) =>
+            item.id.toString().includes(query) || // Pencarian berdasarkan ID
+            item.message.toLowerCase().includes(query) || // Pencarian berdasarkan pesan
+            new Date(item.timestamp)
+              .toLocaleString()
+              .toLowerCase()
+              .includes(query) // Pencarian berdasarkan waktu
+        );
+        renderTable(filteredData);
+      });
+    </script>
+  </body>
+</html>
